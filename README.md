@@ -1,4 +1,4 @@
-# Java: Taller Practico de 18 puntos
+# Libreria, CRUD para recursos universitarios o informativos - CRUD en general
 
 <p align="center">
 <img src="https://www.sofka.com.co/wp-content/uploads/2021/02/sofkau-logo-horizontal.png">
