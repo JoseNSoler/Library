@@ -1,8 +1,11 @@
 package com.example.library.service;
 
 
+import com.example.library.dto.ResourceTextDTO;
+import com.example.library.mapper.ResourceMapper;
 import com.example.library.model.ResourceText;
 import com.example.library.repository.ResourceTextRepository;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.http.HttpStatus;
@@ -10,8 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -20,11 +23,13 @@ public class ResourceTextServiceImpl implements IResourceTextService {
     @Autowired
     private ResourceTextRepository resourceTextRepository;
 
-    @Override
-    public List<ResourceText> findAll() {
+    ResourceMapper resourceMapper = new ResourceMapper();
 
-        return resourceTextRepository.findAll();
+    @Override
+    public List<ResourceTextDTO> findAll() {
+        return resourceMapper.fromCollectionList(resourceTextRepository.findAll());
     }
+
 
     @Override
     public ResponseEntity<String> reserveResource(String id) {
@@ -60,21 +65,88 @@ public class ResourceTextServiceImpl implements IResourceTextService {
         }).get();
     }
 
+    public static boolean checkArray( Object arrayOrString, String queryType) {
+        boolean condition =  arrayOrString.getClass().toString().equals("class java.util.ArrayList");
+        if(condition){
+            ArrayList list = new ArrayList<>((Collection<?>) arrayOrString);
+            Object newList = list.stream().filter(element -> (element.toString().contains(queryType)))
+                    .collect(Collectors.toCollection(ArrayList::new));
+            ArrayList listFilter = new ArrayList<>((Collection<?>) newList);
+            return (!listFilter.isEmpty());
+        }
+        if(!condition){
+            return (String.valueOf(arrayOrString).contains(queryType));
+        }
+        return false;
+    }
+
+    public static boolean checkSubject(ResourceText subject, String querySubject){
+        String subjectList =  subject.getSubject().toString();
+        return( StringUtils.contains(subjectList.toLowerCase(), querySubject.toLowerCase()) );
+    }
 
 
 
+    @Override
+    public List<ResourceTextDTO> recommendedResource(String typeText, String subject){
+        var result = resourceTextRepository.findAll();
 
+        if(typeText != null && subject != null){
+            return resourceMapper.fromCollectionList(
+                    result.stream()
+                    .filter(resourceText -> resourceText.getSubject() != null && resourceText.getFormat() != null)
+                    .filter(resourceText -> (
+                            (checkSubject(resourceText, subject) && (checkArray(resourceText.getFormat(), typeText)) )
+                    ))
+                    .collect(Collectors.toList())
+            );
+        }
 
+        if(typeText == null && subject != null){
+            return resourceMapper.fromCollectionList(
+                    result.stream()
+                    .filter(resourceText -> resourceText.getSubject() != null)
+                    .filter(resourceText -> ( (checkSubject(resourceText, subject)) ))
+                    .collect(Collectors.toList())
+            );
+        }
+        if(typeText != null && subject == null){
+            return resourceMapper.fromCollectionList(
+                    result.stream()
+                    .filter(resourceText -> resourceText.getFormat() != null)
+                    .filter(resourceText -> (checkArray(resourceText.getFormat(), typeText)))
+                    .collect(Collectors.toList())
+            );
+        }
+        ResourceTextDTO resourceText = new ResourceTextDTO();
+        resourceText.setDescription("No exister recurso con los parametros solicitados");
+        return List.of(resourceText);
+    }
 
-    /*
     @Override
     public ResourceTextDTO save(ResourceTextDTO resourceTextDTO) {
-        resourceTextDTO.setAvailable(true);
-        ResourceText resourceText = resourceTextMapper.fromDTO(resourceTextDTO);
-        return resourceTextMapper.fromResourceText(
-                resourceTextRepository.save(resourceText)
+        return resourceMapper.fromResource(
+                resourceTextRepository.save(resourceMapper.fromDTO(resourceTextDTO))
         );
     }
 
-     */
+    @Override
+    public ResourceTextDTO getById(String id) {
+        return resourceMapper.fromResource(
+                resourceTextRepository.findById(id).get()
+        );
+    }
+
+    @Override
+    public ResourceTextDTO deleteById(String id) {
+        ResourceText barry = resourceTextRepository.findById(id).get();
+        if(!barry.getId().isEmpty())
+            resourceTextRepository.deleteById(id);
+
+        return resourceMapper.fromResource(
+                barry
+        );
+    }
+
+
 }

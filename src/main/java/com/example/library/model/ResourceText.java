@@ -21,8 +21,8 @@ public class ResourceText {
 
     private Object format;
     private Object description;
-    private boolean available = true;
-    private String borrowTime = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z").format(new Date());
+    private boolean available;
+    private String borrowTime ;
 
     public ResourceText() {
     }
